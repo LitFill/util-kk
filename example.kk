@@ -38,7 +38,7 @@ fun main()
   println(summary)  // LitFill logged in from localhost
 
   // Positional placeholders.
-  println("%1 + %2 = %3"%^["1", "2", "3"])  // 1 + 2 = 3
+  println("%1 + %2 = %3"%^[1, 2, 3])  // 1 + 2 = 3
 
   // Parsing: one valid input and one invalid input.
   report("let answer = 42")  // ParseOk((answer, 42), rest=...)
