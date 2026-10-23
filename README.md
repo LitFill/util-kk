@@ -2,7 +2,8 @@
 
 Utilities for Koka: a small library for string templating and parser helpers.
 
-`util-kk` is a lightweight Koka library intended for personal projects and downstream flakes. It currently provides:
+`util-kk` is a lightweight Koka library intended for personal projects and
+downstream flakes. It currently provides:
 
 - string interpolation helpers for named and positional placeholders
 - parser utilities built around `std/text/parse`
@@ -11,7 +12,8 @@ Utilities for Koka: a small library for string templating and parser helpers.
 
 ## Why use it?
 
-This library helps when you want cleaner formatting and simpler parsing code in Koka without pulling in a larger framework.
+This library helps when you want cleaner formatting and simpler parsing code in
+Koka without pulling in a larger framework.
 
 Common examples include:
 
@@ -49,12 +51,6 @@ The library is imported as:
 
 ```koka
 import util
-```
-
-or, if you are using a project layout with a `src/` directory:
-
-```koka
-import src/util
 ```
 
 ### String templating
