@@ -534,6 +534,7 @@ write_index() {
 </head>
 <body class="koka doc">
 <main role="main">
+<h1>Util-kk</h1>
 <p>A small collection of general-purpose helpers for Koka — infix operators for
 string templating and combinators for working with <code>std/text/parse</code>.</p>
 
