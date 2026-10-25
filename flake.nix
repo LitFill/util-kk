@@ -11,6 +11,7 @@
   outputs =
     { self, nixpkgs, ... }:
     let
+      version = "0.1.1";
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -36,6 +37,25 @@
       kokaJson =
         pkgs:
         ''{"include_dirs":[${builtins.concatStringsSep "," (map (d: "\"${d}\"") (kokaLibsFor pkgs))}]}'';
+
+      # Shared by the library and the docs, so build artefacts and
+      # generated files never leak into either derivation (and never
+      # invalidate their hashes).
+      srcFor =
+        pkgs:
+        pkgs.lib.cleanSourceWith {
+          src = self;
+          filter =
+            path: type:
+            !(builtins.elem (baseNameOf (toString path)) [
+              "result"
+              "koka.json"
+              ".koka"
+              ".koka-build"
+              "docs"
+            ]);
+        };
+
     in
     {
 
@@ -43,20 +63,9 @@
         pkgs: system: {
           default = pkgs.stdenv.mkDerivation {
             pname = "util";
-            version = "0.1.1";
-            src = pkgs.lib.cleanSourceWith {
-              src = self;
-              filter =
-                path: type:
-                let
-                  base = baseNameOf (toString path);
-                in
-                !(builtins.elem base [
-                  "result"
-                  "koka.json"
-                  ".koka"
-                ]);
-            };
+            inherit version;
+            src = srcFor pkgs;
+
             nativeBuildInputs = [
               pkgs.koka
               pkgs.stdenv.cc
@@ -64,7 +73,7 @@
 
             buildPhase = ''
               runHook preBuild
-              koka -l --output=util --builddir="$PWD/.koka-build" src/util.kk
+              koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk
               runHook postBuild
             '';
 
@@ -81,6 +90,80 @@
               description = "LitFill's utilities for Koka";
               platforms = pkgs.lib.platforms.unix;
             };
+          };
+
+          docs = pkgs.stdenv.mkDerivation {
+            pname = "util-docs";
+            inherit version;
+            src = srcFor pkgs;
+
+            nativeBuildInputs = [
+              pkgs.koka
+            ];
+
+            dontConfigure = true;
+
+            buildPhase = ''
+              runHook preBuild
+
+              # The sandbox has a read-only, nonexistent $HOME; give koka
+              # somewhere writable in case it wants a cache/config dir.
+              export HOME="$TMPDIR"
+
+              mkdir -p docs
+
+              # Invoked through bash explicitly: the build sandbox has no
+              # /usr/bin/env for the script's shebang to resolve.
+              # KOKA_FLAGS carries the dependency `--include` flags so the
+              # docs can be built for modules that import other libraries.
+              KOKA=${pkgs.koka}/bin/koka \
+              KOKA_FLAGS="${kokaLibArgs pkgs}" \
+                bash scripts/build-docs.sh docs
+
+              runHook postBuild
+            '';
+
+            installPhase = ''
+              runHook preInstall
+              test -n "$(ls -A docs)" || { echo "docs/ is empty" >&2; exit 1; }
+              mkdir -p "$out"
+              cp -r docs/. "$out/"
+              runHook postInstall
+            '';
+
+            # Cheap to build and not worth a remote builder round-trip.
+            preferLocalBuild = true;
+
+            meta = {
+              description = "API reference for LitFill's Koka utilities";
+              platforms = pkgs.lib.platforms.unix;
+            };
+          };
+        }
+      );
+      apps = forAllSystems (
+        pkgs: system: {
+          docs = {
+            type = "app";
+            program = "${
+              pkgs.writeShellApplication {
+                name = "gen-docs";
+                runtimeInputs = [
+                  pkgs.koka
+                  pkgs.git
+                ];
+                text = ''
+                  # Selalu tulis ke <root repo>/docs, dari subfolder mana pun
+                  # perintah ini dijalankan.
+                  cd "$(git rev-parse --show-toplevel)"
+                  mkdir -p docs
+
+                  KOKA=${pkgs.koka}/bin/koka \
+                  KOKA_FLAGS="${kokaLibArgs pkgs}" \
+                    bash scripts/build-docs.sh docs
+                '';
+              }
+            }/bin/gen-docs";
           };
         }
       );
@@ -111,6 +194,7 @@
       checks = forAllSystems (
         pkgs: system: {
           build = self.packages.${system}.default;
+          docs = self.packages.${system}.docs;
         }
       );
     };
