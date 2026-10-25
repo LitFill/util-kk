@@ -494,13 +494,13 @@ write_toc() {
 <link rel="stylesheet" href="styles/koka.css" />
 </head>
 <body class="koka doc">
-<main role="main">
 <section aria-labelledby="this-project">
 <h2 id="this-project">This project</h2>
+<ul>
+<li><a href="index.html">index</a> — this page</li>
 <li><a href="src_util.html">util</a> — the <code>util</code> module and its operations</li>
 <li><a href="src_util-source.html">util.kk source</a> — annotated source</li>
 </ul>
-
 <section aria-labelledby="stdlib">
 <h2 id="stdlib">Koka standard library</h2>
 <p>Types the API links to (<code>list</code>, <code>maybe</code>, <code>int</code>, …) are documented upstream.</p>
@@ -536,6 +536,8 @@ write_index() {
 <main role="main">
 <p>A small collection of general-purpose helpers for Koka — infix operators for
 string templating and combinators for working with <code>std/text/parse</code>.</p>
+
+go to toc: <a href="toc.html">toc</a>
 
 <h2 id="usage">Usage</h2>
 
