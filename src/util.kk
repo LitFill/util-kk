@@ -26,14 +26,50 @@ pub infixl 65 (!^), (!^^), (%^)
 //
 // ```koka
 // fun example()
-//   val msg = "%greeting, %name!"!^("%greeting", "Hello")!^("%name", "World")
+//   val msg = replreplace-placeholder("Hello, %name!", ("%name", "World"))
 //   println(msg)  // Hello, World!
 // ```
-pub fun (!^)(str: string, conversion: (string, string)): string
+pub fun replace-placeholder(str: string, conversion: (string, string)): string
     val (ptrn, repl)  = conversion
     val ptrn' = if ptrn.starts-with("%").is-just then ptrn else "%" ++ ptrn
     str.replace-all(ptrn', repl)
 
+// Replaces every occurrence of a single placeholder in a string.
+//
+// The placeholder is given as the first element of `conversion`, and its
+// replacement as the second. If the placeholder does not begin with `%`, the
+// prefix is added automatically, so `"name"` and `"%name"` are equivalent.
+//
+// - `str`: the template string to operate on.
+// - `conversion`: a `(placeholder, replacement)` pair.
+//
+// Returns a new string with all occurrences of the placeholder replaced.
+//
+// ```koka
+// fun example()
+//   val msg = "%greeting, %name!"!^("%greeting", "Hello")!^("%name", "World")
+//   println(msg)  // Hello, World!
+// ```
+pub fun (!^)(str: string, conversion: (string, string)): string
+    replace-placeholder(str, conversion)
+
+// Replaces every occurrence of a single placeholder in a string.
+//
+// The placeholder is given as the first element of `conversion`, and its
+// replacement as the second. The replacement is a showable type (has a show
+// function). If the placeholder does not begin with `%`, the prefix is added
+// automatically, so `"name"` and `"%name"` are equivalent.
+//
+// - `str`: the template string to operate on.
+// - `conversion`: a `(placeholder, replacement)` pair.
+//
+// Returns a new string with all occurrences of the placeholder replaced.
+//
+// ```koka
+// fun example()
+//   val msg = "Showing list: %list."!^("%list", [1, 2, 3, 4])
+//   println(msg)  // "Showing list: [1, 2, 3, 4]."
+// ```
 pub fun default/(!^)(str: string, conversion: (string, a), ?show: a -> e string) : e string
     val (ptrn, repl)  = conversion
     val ptrn' = if ptrn.starts-with("%").is-just then ptrn else "%" ++ ptrn
@@ -41,9 +77,52 @@ pub fun default/(!^)(str: string, conversion: (string, a), ?show: a -> e string)
 
 // Replaces multiple named placeholders in a string.
 //
-// This is the list-based counterpart of `(!^)`. Each
-// `(placeholder, replacement)` pair is applied in list order via a left fold,
-// so later conversions operate on the output of earlier ones.
+// This is the list-based counterpart of `(!^)`. Each `(placeholder,
+// replacement)` pair is applied in list order via a left fold, so later
+// conversions operate on the output of earlier ones.
+//
+// - `str`: the template string to operate on.
+// - `conversions`: a list of `(placeholder, replacement)` pairs.
+//
+// Returns a new string with all placeholders replaced.
+//
+// ```koka
+// fun example()
+//   val msg = replace-placeholders(
+//       "%greeting, %name!",
+//       [("%greeting", "Hello"), ("%name", "World")])
+//   println(msg)  // Hello, World!
+// ```
+pub fun replace-placeholders(str: string, conversions: list<(string, string)>): string
+    conversions.foldl(str, _!^_)
+
+// Replaces multiple named placeholders in a string.
+//
+// This is the list-based counterpart of `(!^)`. Each `(placeholder,
+// replacement)` pair is applied in list order via a left fold, so later
+// conversions operate on the output of earlier ones.
+//
+// - `str`: the template string to operate on.
+// - `conversions`: a list of `(placeholder, replacement)` pairs.
+//
+// Returns a new string with all placeholders replaced.
+//
+// ```koka
+// fun example()
+//   val msg = "%greeting, %name!"!^^[
+//         ("%greeting", "Hello")
+//       , ("%name", "World")
+//       ]
+//   println(msg)  // Hello, World!
+// ```
+pub fun (!^^)(str: string, conversions: list<(string, string)>): string
+    conversions.foldl(str, _!^_)
+
+// Replaces multiple named placeholders in a string.
+//
+// This is the list-based counterpart of `default/(!^)`. Each `(placeholder,
+// replacement)` pair is applied in list order via a left fold, so later
+// conversions operate on the output of earlier ones.
 //
 // - `str`: the template string to operate on.
 // - `conversions`: a list of `(placeholder, replacement)` pairs.
@@ -55,11 +134,36 @@ pub fun default/(!^)(str: string, conversion: (string, a), ?show: a -> e string)
 //   val msg = "%greeting, %name!"!^^[("%greeting", "Hello"), ("%name", "World")]
 //   println(msg)  // Hello, World!
 // ```
-pub fun (!^^)(str: string, conversions: list<(string, string)>): string
-    conversions.foldl(str, _!^_)
-
 pub fun default/(!^^)(str: string, conversions: list<(string, a)>, ?a/show: a -> e string): e string
     conversions.foldl(str, _!^_)
+
+// Replaces positional placeholders (`%1`, `%2`, ...) with values from a list.
+//
+// Placeholders are numbered starting at 1, and the n-th element of `repls`
+// replaces every occurrence of `%n`. Replacements are applied sequentially,
+// from `%1` upward.
+//
+// - `str`: the template string to operate on.
+// - `repls`: the replacement values, in positional order.
+//
+// Returns a new string with all positional placeholders replaced.
+//
+// Note: because replacement is textual and sequential, `%1` is a prefix of
+// `%10`. Lists with ten or more elements may therefore produce incorrect
+// output. Likewise, if a replacement value itself contains a placeholder
+// (e.g. `"%2"`), it may be substituted by a later pass.
+//
+// ```koka
+// fun example()
+//   val msg = replreplace-positional("%1, %2!", ["Hello", "World"])
+//   println(msg)  // Hello, World!
+// ```
+pub fun replace-positional(str: string, repls: list<string>): string
+    list(1, repls.length)
+    .map("%" ++ _.show)
+    .zip(repls)
+    .foldl(str) fn(z, (ix, x))
+        z.replace-all(ix, x)
 
 // Replaces positional placeholders (`%1`, `%2`, ...) with values from a list.
 //
@@ -83,12 +187,29 @@ pub fun default/(!^^)(str: string, conversions: list<(string, a)>, ?a/show: a ->
 //   println(msg)  // Hello, World!
 // ```
 pub fun (%^)(str: string, repls: list<string>): string
-    list(1, repls.length)
-    .map("%" ++ _.show)
-    .zip(repls)
-    .foldl(str) fn(z, (ix, x))
-        z.replace-all(ix, x)
+    replace-positional(str, repls)
 
+// Replaces positional placeholders (`%1`, `%2`, ...) with values from a list.
+//
+// Placeholders are numbered starting at 1, and the n-th element of `repls`
+// replaces every occurrence of `%n`. Replacements are applied sequentially,
+// from `%1` upward. The `repls` should have a show function.
+//
+// - `str`: the template string to operate on.
+// - `repls`: the replacement values, in positional order.
+//
+// Returns a new string with all positional placeholders replaced.
+//
+// Note: because replacement is textual and sequential, `%1` is a prefix of
+// `%10`. Lists with ten or more elements may therefore produce incorrect
+// output. Likewise, if a replacement value itself contains a placeholder
+// (e.g. `"%2"`), it may be substituted by a later pass.
+//
+// ```koka
+// fun example()
+//   val msg = "%1, %2!"%^["Hello", "World"]
+//   println(msg)  // Hello, World!
+// ```
 pub fun default/(%^)(str: string, repls: list<a>, ?a/show: a -> e string): e string
     list(1, repls.length)
     .map("%" ++ _.show)
