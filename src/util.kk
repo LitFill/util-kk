@@ -284,3 +284,69 @@ pub fun lex(p: parser<e, a>): <parse|e> a
 pub fun token(s: string) : parse string
     with lex
     pstring(s)
+
+// Flatten the double maybe stack after mapping the function a.k.a. monadic
+// bind.
+//
+// ```koka
+// fun example() : fetch report
+//   with name  <- db.get-name(id).flatmap
+//                 // get-name : (db : db, id : id) -> fetch maybe<name>
+//   with dept  <- db.get-dept(name).flatmap
+//                 // get-dept(db : db, name : name) -> fetch maybe<departement>
+//   with sales <- db.get-dept-sales(dept).flatmap
+//                 // get-dept-sales(db : db, dept : departement) -> fetch maybe<list<sale-info>>
+//   val record = Record(dept, sales)
+//   Report(name, record)
+// ```
+pub fun maybe/flatmap(ma : maybe<a>, f : a -> e maybe<b>) : e maybe<b>
+    ma.map(f).flatten
+
+// Lift a 2-function over maybe, a.k.a. zipwith.
+pub fun maybe/map2(ma : maybe<a>, mb : maybe<b>, f : (a, b) -> e c) : e maybe<c>
+    match ma
+        Just(a) -> match mb
+            Just(b) -> Just(f(a, b))
+            _ -> Nothing
+        _ -> Nothing
+
+// Zip 2 maybes with a 2-function.
+pub fun maybe/zipwith(ma : maybe<a>, mb : maybe<b>, f : (a, b) -> e c) : e maybe<c>
+    map2(ma, mb, f)
+
+// Zip 2 maybes over Tuple2, defined in term of `zipwith` and `(_, _)`
+pub fun maybe/zip(ma : maybe<a>, mb : maybe<b>) : maybe<(a, b)>
+    map2(ma, mb, (_, _))
+
+// Zip 2 maybes over Tuple2, but returning `maybe2<a, b>` instead of
+// `maybe<(a, b)>`.
+pub fun maybe2/zip(ma : maybe<a>, mb : maybe<b>) : maybe2<a, b>
+    match ma
+        Just(a) -> match mb
+            Just(b) -> Just2(a, b)
+            _ -> Nothing2
+        _ -> Nothing2
+
+// Alias for `list/zipwith`.
+pub fun list/map2(xs : list<a>, ys : list<b>, f : (a, b) -> e c) : e list<c>
+    zipwith(xs, ys, f)
+
+// Map the function over the list and pincking only the Just values.
+//
+// ```koka
+// fun example()
+//   fun f(x : int) if x.is-even then Just(x * 2)  else Nothing
+//   fun g(x : int) if x > 6     then Just(10 - x) else Nothing
+//   list(1, 10).map-maybe(f).println // prints: [4,8,12,16,20]
+//   list(1, 10).map-maybe(g).println // prints: [3,2,1,0]
+// ```
+pub fun list/map-maybe(xs : list<a>, f : a -> e maybe<b>) : e list<b>
+    match xs
+        Nil -> Nil
+        Cons(x, xx) -> match f(x)
+            Just(b) -> Cons(b, xx.map-maybe(f))
+            Nothing -> xx.map-maybe(f)
+
+pub fun list/map-maybe'(xs : list<a>, f : a -> e maybe<b>) : e list<b>
+    xs.foldr(Nil) fn(x, z) f(x).maybe(z) fn(b) Cons(b, z)
+

@@ -73,7 +73,7 @@
 
             buildPhase = ''
               runHook preBuild
-              koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk
+              koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk src/utils/het-cmp.kk
               runHook postBuild
             '';
 
@@ -81,8 +81,8 @@
             # `--include=<includePath>` and compile against these modules.
             installPhase = ''
               runHook preInstall
-              install -Dm644 src/util.kk \
-                $out/share/koka/${pkgs.koka.version}/util.kk
+              install -Dm644 src/util.kk          $out/share/koka/${pkgs.koka.version}/util.kk
+              install -Dm644 src/utils/het-cmp.kk $out/share/koka/${pkgs.koka.version}/utils/het-cmp.kk
               runHook postInstall
             '';
 
