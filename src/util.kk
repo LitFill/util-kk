@@ -26,7 +26,7 @@ pub infixl 65 (!^), (!^^), (%^)
 //
 // ```koka
 // fun example()
-//   val msg = replreplace-placeholder("Hello, %name!", ("%name", "World"))
+//   val msg = replace-placeholder("Hello, %name!", ("%name", "World"))
 //   println(msg)  // Hello, World!
 // ```
 pub fun replace-placeholder(str: string, conversion: (string, string)): string
