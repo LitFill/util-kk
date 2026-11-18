@@ -351,6 +351,16 @@ pub fun list/map-maybe(xs: list<a>, f: a -> e maybe<b>): e list<b>
             Just(b) -> Cons(b, xx.map-maybe(f))
             Nothing -> xx.map-maybe(f)
 
+// Map the function over the list and keep only the Just values.
+//
+// This is the fold-based counterpart of `list/map-maybe`. It has the same
+// behaviour and returns the same result.
+//
+// ```koka
+// fun example()
+//   fun f(x : int) if x.is-even then Just(x * 2) else Nothing
+//   list(1, 10).map-maybe'(f).println // prints: [4,8,12,16,20]
+// ```
 pub fun list/map-maybe'(xs : list<a>, f : a -> e maybe<b>) : e list<b>
     xs.foldr(Nil) fn(x, z) f(x).maybe(z) fn(b) Cons(b, z)
 
