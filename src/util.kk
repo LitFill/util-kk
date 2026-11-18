@@ -363,3 +363,31 @@ pub fun maybe/any(ma: maybe<a>, pred: a -> e bool): e bool
 // Returns True if Nothing
 pub fun maybe/all(ma: maybe<a>, pred: a -> e bool): e bool
     ma.maybe(True, pred)
+
+// Do the action `a` and discard the result, then do `b` returning the result.
+//
+// ```koka
+// fun greet() "Hello, World!".println
+// fun throw-up() throw("up")
+// fun example()
+//   val action = greet.and-then(throw-up)
+//   action()
+// ```
+pub fun and-then(a: () -> e a, b: () -> e b): (() -> e b)
+  fn()
+    a()
+    b()
+
+// Perform `action` repeatedly forever. Causes the divergence effect.
+//
+// ```koka
+// fun example()
+//   forever
+//     "echo> ".print
+//     val line = readline()
+//     line.println
+// ```
+pub fun forever(action: () -> <div|e> ()): <div|e> ()
+  while { True }
+    action()
+
