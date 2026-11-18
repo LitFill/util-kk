@@ -285,6 +285,10 @@ pub fun token(s: string) : parse string
     with lex
     pstring(s)
 
+// Run the parser on the input, converting `ParseError<a>` into an `either<string, a>`
+pub fun parser/run(input: string, parser: parser<e, a>): e either<string, a>
+  input.slice.parse(parser).either
+
 // Flatten the double maybe stack after mapping the function a.k.a. monadic
 // bind.
 //
