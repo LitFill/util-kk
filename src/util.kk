@@ -354,8 +354,12 @@ pub fun list/map-maybe(xs: list<a>, f: a -> e maybe<b>): e list<b>
 pub fun list/map-maybe'(xs : list<a>, f : a -> e maybe<b>) : e list<b>
     xs.foldr(Nil) fn(x, z) f(x).maybe(z) fn(b) Cons(b, z)
 
-pub fun maybe/any(ma : maybe<a>, pred : a -> e bool) : e bool
+// Does the element satisfy the predicate?
+// Returns False if Nothing
+pub fun maybe/any(ma: maybe<a>, pred: a -> e bool): e bool
     ma.maybe(False, pred)
 
-pub fun maybe/all(ma : maybe<a>, pred : a -> e bool) : e bool
+// Does the element satisfy the predicate?
+// Returns True if Nothing
+pub fun maybe/all(ma: maybe<a>, pred: a -> e bool): e bool
     ma.maybe(True, pred)
