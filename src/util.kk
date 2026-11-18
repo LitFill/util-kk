@@ -344,7 +344,7 @@ pub fun list/map2(xs : list<a>, ys : list<b>, f : (a, b) -> e c) : e list<c>
 //   list(1, 10).map-maybe(f).println // prints: [4,8,12,16,20]
 //   list(1, 10).map-maybe(g).println // prints: [3,2,1,0]
 // ```
-pub fun list/map-maybe(xs : list<a>, f : a -> e maybe<b>) : e list<b>
+pub fun list/map-maybe(xs: list<a>, f: a -> e maybe<b>): e list<b>
     match xs
         Nil -> Nil
         Cons(x, xx) -> match f(x)
