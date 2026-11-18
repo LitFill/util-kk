@@ -331,6 +331,16 @@ pub fun maybe2/zip(ma : maybe<a>, mb : maybe<b>) : maybe2<a, b>
             _ -> Nothing2
         _ -> Nothing2
 
+// Does the element satisfy the predicate?
+// Returns False if Nothing
+pub fun maybe/any(ma: maybe<a>, pred: a -> e bool): e bool
+    ma.maybe(False, pred)
+
+// Does the element satisfy the predicate?
+// Returns True if Nothing
+pub fun maybe/all(ma: maybe<a>, pred: a -> e bool): e bool
+    ma.maybe(True, pred)
+
 // Alias for `list/zipwith`.
 pub fun list/map2(xs : list<a>, ys : list<b>, f : (a, b) -> e c) : e list<c>
     zipwith(xs, ys, f)
@@ -363,16 +373,6 @@ pub fun list/map-maybe(xs: list<a>, f: a -> e maybe<b>): e list<b>
 // ```
 pub fun list/map-maybe'(xs : list<a>, f : a -> e maybe<b>) : e list<b>
     xs.foldr(Nil) fn(x, z) f(x).maybe(z) fn(b) Cons(b, z)
-
-// Does the element satisfy the predicate?
-// Returns False if Nothing
-pub fun maybe/any(ma: maybe<a>, pred: a -> e bool): e bool
-    ma.maybe(False, pred)
-
-// Does the element satisfy the predicate?
-// Returns True if Nothing
-pub fun maybe/all(ma: maybe<a>, pred: a -> e bool): e bool
-    ma.maybe(True, pred)
 
 // Do the action `a` and discard the result, then do `b` returning the result.
 //
