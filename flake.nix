@@ -79,19 +79,15 @@
 
             # A Koka library is its source: consumers resolve it with
             # `--include=<includePath>` and compile against these modules.
-            installPhase =
-              let
-                installFor = module: /* bash */ "install -Dm644 src${module}  $out/share/koka/${pkgs.koka.version}/${module}";
-              in
-              /* bash */ ''
+              installPhase = ''
                 runHook preInstall
-                  ${installFor "util.kk"}
-                  ${installFor "utils/het-cmp.kk"}
-                  ${installFor "utils/state.kk"}
-                  ${installFor "utils/reader.kk"}
-                  ${installFor "utils/exit.kk"}
+                install -Dm644 src/util.kk           $out/share/koka/${pkgs.koka.version}/util.kk
+                install -Dm644 src/utils/het-cmp.kk   $out/share/koka/${pkgs.koka.version}/utils/het-cmp.kk
+                install -Dm644 src/utils/state.kk      $out/share/koka/${pkgs.koka.version}/utils/state.kk
+                install -Dm644 src/utils/reader.kk     $out/share/koka/${pkgs.koka.version}/utils/reader.kk
+                install -Dm644 src/utils/exit.kk       $out/share/koka/${pkgs.koka.version}/utils/exit.kk
                 runHook postInstall
-              '';
+              ''
 
             meta = {
               description = "LitFill's utilities for Koka";
