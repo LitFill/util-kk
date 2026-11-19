@@ -73,18 +73,25 @@
 
             buildPhase = ''
               runHook preBuild
-              koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk src/utils/het-cmp.kk
+                koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk src/utils/het-cmp.kk src/utils/state.kk src/utils/reader.kk src/utils/exit.kk
               runHook postBuild
             '';
 
             # A Koka library is its source: consumers resolve it with
             # `--include=<includePath>` and compile against these modules.
-            installPhase = ''
-              runHook preInstall
-              install -Dm644 src/util.kk          $out/share/koka/${pkgs.koka.version}/util.kk
-              install -Dm644 src/utils/het-cmp.kk $out/share/koka/${pkgs.koka.version}/utils/het-cmp.kk
-              runHook postInstall
-            '';
+            installPhase =
+              let
+                installFor = module: /* bash */ "install -Dm644 src${module}  $out/share/koka/${pkgs.koka.version}/${module}";
+              in
+              /* bash */ ''
+                runHook preInstall
+                  ${installFor "util.kk"}
+                  ${installFor "utils/het-cmp.kk"}
+                  ${installFor "utils/state.kk"}
+                  ${installFor "utils/reader.kk"}
+                  ${installFor "utils/exit.kk"}
+                runHook postInstall
+              '';
 
             meta = {
               description = "LitFill's utilities for Koka";
