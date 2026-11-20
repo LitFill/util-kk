@@ -85,6 +85,30 @@
             );
         };
 
+      # The freshness check needs the committed docs, which `srcFor` drops.
+      srcWithDocs =
+        pkgs:
+        let
+          inherit (pkgs.lib) cleanSourceWith;
+        in
+        cleanSourceWith {
+          src = self;
+          filter =
+            path: type:
+            let
+              name = baseNameOf (path |> toString);
+            in
+            !(
+              elem name [
+                "result"
+                "koka.json"
+                ".koka"
+                ".koka-build"
+              ]
+              || match "result-.*" name != null
+            );
+        };
+
     in
     {
 
@@ -257,10 +281,36 @@
         pkgs: system:
         let
           inherit (pkgs) runCommand;
+          inherit (pkgs.lib) concatStringsSep;
         in
         {
           build = self.packages.${system}.default;
           docs = self.packages.${system}.docs;
+
+          # Regenerate the docs in a temporary directory and compare them with
+          # the committed docs, so the reference cannot silently go stale.
+          docs-fresh =
+            runCommand "util-docs-fresh"
+              {
+                nativeBuildInputs = with pkgs; [
+                  coreutils
+                  diffutils
+                  findutils
+                  gnugrep
+                  gnused
+                  koka
+                ];
+                src = srcWithDocs pkgs;
+              }
+              ''
+                set -e
+                export HOME="$TMPDIR"
+                cd "$src"
+                KOKA=${pkgs.koka}/bin/koka \
+                KOKA_BUILD_DIR="$TMPDIR/koka-docs" \
+                  bash scripts/build-docs.sh --check docs ${concatStringsSep " " docModules}
+                touch $out
+              '';
 
           # Compile and run a program against the installed package, through
           # the same include path that downstream flakes receive.
