@@ -8,7 +8,12 @@
 # scaffolding, so this script runs the compiler, collects the pages, and
 # supplies the stylesheet, the table of contents, and the landing page.
 #
-# Usage: scripts/build-docs.sh <out-dir>
+# Usage: scripts/build-docs.sh [--check] <out-dir> [module.kk]...
+#
+#   --check   build into a temporary directory and compare it with <out-dir>;
+#             exit non-zero when they differ. Nothing is written to <out-dir>.
+#
+#   With no module argument, the script builds src/util.kk.
 #
 # Paths are relative to the repository root.
 #
@@ -24,13 +29,24 @@ set -euo pipefail
 
 die() { echo "error: $*" >&2; exit 1; }
 
-if [ "$#" -ne 1 ]; then
-  echo "usage: $0 <out-dir>" >&2
+CHECK=0
+if [ "${1:-}" = "--check" ]; then
+  CHECK=1
+  shift
+fi
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: $0 [--check] <out-dir> [module.kk]..." >&2
   exit 64
 fi
 
 OUT_ARG="$1"
-MODULES=("src/util.kk")
+shift
+if [ "$#" -eq 0 ]; then
+  MODULES=("src/util.kk")
+else
+  MODULES=("$@")
+fi
 
 while [ "${OUT_ARG%/}" != "$OUT_ARG" ] && [ "$OUT_ARG" != "/" ]; do
   OUT_ARG="${OUT_ARG%/}"
@@ -300,7 +316,18 @@ generate() {
 }
 
 main() {
-  local tmp old
+  local tmp status old
+
+  if [ "$CHECK" = 1 ]; then
+    tmp="$(mktemp -d)"
+    generate "$tmp"
+    status=0
+    diff -r "$tmp" "$OUT_ARG" || status=$?
+    rm -rf "$tmp"
+    [ "$status" -eq 0 ] || die "docs are stale: $OUT_ARG differs from a fresh build"
+    echo "docs are up to date: $OUT_ARG"
+    return 0
+  fi
 
   # Build beside the target, then swap, so a failed build leaves the current
   # docs in place.
