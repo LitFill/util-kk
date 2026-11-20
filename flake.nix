@@ -11,6 +11,9 @@
   outputs =
     { self, nixpkgs, ... }:
     let
+      inherit (nixpkgs.lib) genAttrs;
+      inherit (builtins) concatStringsSep elem match;
+
       version = "0.2.0";
       systems = [
         "x86_64-linux"
@@ -18,7 +21,7 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system} system);
+      forAllSystems = f: genAttrs systems (system: f nixpkgs.legacyPackages.${system} system);
 
       # One Koka include directory per dependency. `koki add` writes the
       # lines between the markers below and `koki remove` takes them out;
@@ -30,38 +33,65 @@
       ];
 
       # `--include` flags for the compiler.
-      kokaLibArgs = pkgs: builtins.concatStringsSep " " (map (d: "--include=${d}") (kokaLibsFor pkgs));
+      kokaLibArgs = pkgs: kokaLibsFor pkgs |> map (d: "--include=${d}") |> concatStringsSep " ";
 
       # The same list as a `koka.json` `include_dirs` array, which is what
       # editors and the Koka language server read.
       kokaJson =
         pkgs:
-        ''{"include_dirs":[${builtins.concatStringsSep "," (map (d: "\"${d}\"") (kokaLibsFor pkgs))}]}'';
+        let
+          dirs = kokaLibsFor pkgs |> map (d: "\"${d}\"") |> concatStringsSep ",";
+        in
+        ''{"include_dirs":[${dirs}]}'';
+
+      # The modules the package installs. Both the build and the install step
+      # derive their file list from this one place, so they cannot drift.
+      modules = [
+        "util.kk"
+        "utils/het-cmp.kk"
+        "utils/state.kk"
+        "utils/reader.kk"
+        "utils/exit.kk"
+      ];
 
       # Shared by the library and the docs, so build artefacts and
       # generated files never leak into either derivation (and never
       # invalidate their hashes).
       srcFor =
         pkgs:
-        pkgs.lib.cleanSourceWith {
+        let
+          inherit (pkgs.lib) cleanSourceWith;
+        in
+        cleanSourceWith {
           src = self;
           filter =
             path: type:
-            !(builtins.elem (baseNameOf (toString path)) [
-              "result"
-              "koka.json"
-              ".koka"
-              ".koka-build"
-              "docs"
-            ]);
+            let
+              name = baseNameOf (path |> toString);
+            in
+            !(
+              elem name [
+                "result"
+                "koka.json"
+                ".koka"
+                ".koka-build"
+                "docs"
+              ]
+              || match "result-.*" name != null
+            );
         };
 
     in
     {
 
       packages = forAllSystems (
-        pkgs: system: {
-          default = pkgs.stdenv.mkDerivation {
+        pkgs: system:
+        let
+          inherit (pkgs.stdenv) mkDerivation;
+          inherit (pkgs.lib) concatStringsSep licenses platforms;
+        in
+        {
+          default = mkDerivation {
             pname = "util";
             inherit version;
             src = srcFor pkgs;
@@ -73,7 +103,10 @@
 
             buildPhase = ''
               runHook preBuild
-                koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" src/util.kk src/utils/het-cmp.kk src/utils/state.kk src/utils/reader.kk src/utils/exit.kk
+                export HOME="$TMPDIR"
+                koka -l ${kokaLibArgs pkgs} --output=util --builddir="$PWD/.koka-build" ${
+                  modules |> map (m: "src/${m}") |> concatStringsSep " "
+                }
               runHook postBuild
             '';
 
@@ -85,21 +118,18 @@
               in
               /* bash */ ''
                 runHook preInstall
-                  ${installFor "util.kk"}
-                  ${installFor "utils/het-cmp.kk"}
-                  ${installFor "utils/state.kk"}
-                  ${installFor "utils/reader.kk"}
-                  ${installFor "utils/exit.kk"}
+                  ${map installFor modules |> concatStringsSep "\n"}
                 runHook postInstall
               '';
 
             meta = {
               description = "LitFill's utilities for Koka";
-              platforms = pkgs.lib.platforms.unix;
+              license = licenses.mit;
+              platforms = platforms.unix;
             };
           };
 
-          docs = pkgs.stdenv.mkDerivation {
+          docs = mkDerivation {
             pname = "util-docs";
             inherit version;
             src = srcFor pkgs;
@@ -143,21 +173,27 @@
 
             meta = {
               description = "API reference for LitFill's Koka utilities";
-              platforms = pkgs.lib.platforms.unix;
+              license = licenses.mit;
+              platforms = platforms.unix;
             };
           };
         }
       );
       apps = forAllSystems (
-        pkgs: system: {
+        pkgs: system:
+        let
+          inherit (pkgs) writeShellApplication;
+          inherit (pkgs.lib.licenses) mit;
+        in
+        {
           docs = {
             type = "app";
             program = "${
-              pkgs.writeShellApplication {
+              writeShellApplication {
                 name = "gen-docs";
-                runtimeInputs = [
-                  pkgs.koka
-                  pkgs.git
+                runtimeInputs = with pkgs; [
+                  koka
+                  git
                 ];
                 text = ''
                   # Selalu tulis ke <root repo>/docs, dari subfolder mana pun
@@ -171,6 +207,10 @@
                 '';
               }
             }/bin/gen-docs";
+            meta = {
+              description = "Generate the API reference for util-kk";
+              license = mit;
+            };
           };
         }
       );
@@ -180,28 +220,73 @@
       # when this flake is added as a dependency.
       kokaLibraries = forAllSystems (
         pkgs: system: {
-          util = {
-            path = self.packages.${system}.default;
-            includePath = "${self.packages.${system}.default}/share/koka/${pkgs.koka.version}";
-            version = pkgs.koka.version;
-            libVersion = self.packages.${system}.default.version;
-          };
+          util =
+            let
+              package = self.packages.${system}.default;
+            in
+            {
+              path = package;
+              includePath = "${package}/share/koka/${pkgs.koka.version}";
+              version = pkgs.koka.version;
+              libVersion = package.version;
+            };
         }
       );
 
       devShells = forAllSystems (
-        pkgs: system: {
-          default = pkgs.mkShell {
-            packages = [ pkgs.koka ];
+        pkgs: system:
+        let
+          inherit (pkgs) mkShell;
+        in
+        {
+          default = mkShell {
+            packages = with pkgs; [ koka ];
             shellHook = "printf '%s\\n' '${kokaJson pkgs}' > \"$PWD/koka.json\"";
           };
         }
       );
 
       checks = forAllSystems (
-        pkgs: system: {
+        pkgs: system:
+        let
+          inherit (pkgs) runCommand;
+        in
+        {
           build = self.packages.${system}.default;
           docs = self.packages.${system}.docs;
+
+          # Compile and run a program against the installed package, through
+          # the same include path that downstream flakes receive.
+          consumer =
+            runCommand "util-consumer"
+              {
+                nativeBuildInputs = [ pkgs.koka ];
+                util = self.packages.${system}.default;
+              }
+              ''
+                set -e
+                export HOME="$TMPDIR"
+
+                cat > main.kk <<'EOF'
+                import util
+                import utils/state
+                import utils/reader
+                import utils/exit
+                import utils/het-cmp
+
+                fun main()
+                  println("%1-%2"%^["a", "b"])
+                  val (r, s) = state/run(0) {
+                    modify(_ + 1)
+                    get()
+                  }
+                  println((r, s))
+                  println(het/(==)(Just(1), Just(1)))
+                EOF
+
+                koka --include=$util/share/koka/${pkgs.koka.version} -e main.kk
+                touch $out
+              '';
         }
       );
     };
