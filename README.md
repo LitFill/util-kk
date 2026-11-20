@@ -8,13 +8,13 @@ and in downstream Nix flakes.
 
 The library has five modules.
 
-| Module | Contents |
-| --- | --- |
-| `util` | String templating functions. Parser helpers for `std/text/parse`. Maybe, list, and control flow helpers. |
-| `state` | The `state` effect and the functions that use it. |
-| `reader` | The `reader` effect and the functions that use it. |
-| `exit` | The `exit` effect and the `exiting` function. |
-| `het-cmp` | Comparison functions for values of different types. |
+| Module | Import | Contents |
+| --- | --- | --- |
+| `util` | `import util` | String templating functions. Parser helpers for `std/text/parse`. Maybe, list, and control flow helpers. |
+| `state` | `import utils/state` | The `state` effect and the functions that use it. |
+| `reader` | `import utils/reader` | The `reader` effect and the functions that use it. |
+| `exit` | `import utils/exit` | The `exit` effect and the `exiting` function. |
+| `het-cmp` | `import utils/het-cmp` | Comparison functions for values of different types. |
 
 The modules are independent. Import only the modules that you need.
 
@@ -46,10 +46,18 @@ kokaLibsFor = pkgs: [
 
 ## Usage
 
-Import the module that you need:
+Import the module that you need. The import path is the module path in the
+include directory:
 
 ```koka
 import util
+```
+
+The `state`, `reader`, `exit`, and `het-cmp` modules are in the `utils`
+directory. Import them with the `utils/` prefix:
+
+```koka
+import utils/state
 ```
 
 ### String templating
