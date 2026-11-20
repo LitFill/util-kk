@@ -17,12 +17,15 @@
 <pre class="koka source"><span class="comment">// # Utilities
 //
 // A small collection of general-purpose helpers used across personal projects.
-// The contents currently fall into two groups:
+// The contents fall into four groups:
 //
 // - Infix operators for string templating, which substitute &#96;%&#96;-prefixed
 //   placeholders with replacement values.
 // - Helpers for working with &#96;std/text/parse&#96;, including a &#96;show&#96;
 //   implementation for parse results and lexeme-style combinators.
+// - Helpers for &#96;maybe&#96; and &#96;list&#96; values, such as &#96;maybe/flatmap&#96;,
+//   &#96;maybe/zipwith&#96;, and &#96;list/map-maybe&#96;.
+// - Control-flow helpers, such as &#96;and-then&#96; and &#96;forever&#96;.
 </span><span class="kw">module</span> <a class="pp" href="src_util.html#_null_"><span class="mo">util</span><span class="pc"><span class="mo">src<span class="fslash">/</span>util</span></span></a>
 
 <span class="kw">import</span> <a class="pp" href="https://koka-lang.github.io/koka/doc/std_text_parse.html#_null_"><span class="mo">std/text/parse</span><span class="pc"><span class="mo">std<span class="fslash">/</span>text<span class="fslash">/</span>parse</span></span></a>

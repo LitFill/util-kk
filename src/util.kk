@@ -1,12 +1,15 @@
 // # Utilities
 //
 // A small collection of general-purpose helpers used across personal projects.
-// The contents currently fall into two groups:
+// The contents fall into four groups:
 //
 // - Infix operators for string templating, which substitute `%`-prefixed
 //   placeholders with replacement values.
 // - Helpers for working with `std/text/parse`, including a `show`
 //   implementation for parse results and lexeme-style combinators.
+// - Helpers for `maybe` and `list` values, such as `maybe/flatmap`,
+//   `maybe/zipwith`, and `list/map-maybe`.
+// - Control-flow helpers, such as `and-then` and `forever`.
 module util
 
 import std/text/parse
