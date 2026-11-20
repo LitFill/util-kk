@@ -300,6 +300,7 @@ fun example()
 | `example.kk` | A program that shows the string and parser functions. |
 | `bench.kk` | Benchmarks for the string templating functions. |
 | `scripts/build-docs.sh` | The script that generates the API reference. |
+| `assets/` | Stylesheet and page templates for the docs. |
 | `flake.nix` | The Nix build and the flake outputs. |
 
 ## Development
@@ -310,11 +311,10 @@ Run these commands in the repository root:
 nix develop          # Enter the development shell.
 koka -e example.kk   # Run the example program.
 nix build            # Build the library.
-nix run .#docs       # Generate docs/ from src/util.kk.
+nix run .#docs       # Generate docs/ for every module.
 ```
 
-The `docs/` directory contains the API reference for the `util` module. The
-other modules have no generated reference.
+The `docs/` directory contains the API reference for every module.
 
 ## License
 
