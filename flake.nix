@@ -54,6 +54,10 @@
         "utils/exit.kk"
       ];
 
+      # The same modules as paths from the repository root, which is what the
+      # docs generator takes.
+      docModules = map (m: "src/${m}") modules;
+
       # Shared by the library and the docs, so build artefacts and
       # generated files never leak into either derivation (and never
       # invalidate their hashes).
@@ -147,15 +151,13 @@
               # somewhere writable in case it wants a cache/config dir.
               export HOME="$TMPDIR"
 
-              mkdir -p docs
-
               # Invoked through bash explicitly: the build sandbox has no
               # /usr/bin/env for the script's shebang to resolve.
               # KOKA_FLAGS carries the dependency `--include` flags so the
               # docs can be built for modules that import other libraries.
               KOKA=${pkgs.koka}/bin/koka \
               KOKA_FLAGS="${kokaLibArgs pkgs}" \
-                bash scripts/build-docs.sh docs
+                bash scripts/build-docs.sh docs ${concatStringsSep " " docModules}
 
               runHook postBuild
             '';
@@ -184,6 +186,7 @@
         let
           inherit (pkgs) writeShellApplication;
           inherit (pkgs.lib.licenses) mit;
+          inherit (pkgs.lib) concatStringsSep;
         in
         {
           docs = {
@@ -192,8 +195,12 @@
               writeShellApplication {
                 name = "gen-docs";
                 runtimeInputs = with pkgs; [
-                  koka
+                  coreutils
+                  findutils
                   git
+                  gnugrep
+                  gnused
+                  koka
                 ];
                 text = ''
                   # Selalu tulis ke <root repo>/docs, dari subfolder mana pun
@@ -203,7 +210,7 @@
 
                   KOKA=${pkgs.koka}/bin/koka \
                   KOKA_FLAGS="${kokaLibArgs pkgs}" \
-                    bash scripts/build-docs.sh docs
+                    bash scripts/build-docs.sh docs ${concatStringsSep " " docModules}
                 '';
               }
             }/bin/gen-docs";
